@@ -1,12 +1,11 @@
 #include <stdio.h>
-#define FRAME -1
-#define EMPTY 0
-#define WHITE 1
-#define BLACK 2
-#define GRID 8
+#define EMPTY '-'
+#define WHITE 'O'
+#define BLACK 'X'
+#define GRID   8
 
 
-int board[GRID][GRID];
+char board[GRID][GRID];
 
 
 void init_board(void);
@@ -37,9 +36,15 @@ void init_board(void) {
 void print_board(void) {
     int i, j;
 
+    printf("   ");
     for (i = 0; i < GRID; i++) {
+        printf(" %c ", 'A' + i);
+    }
+    printf("\n");
+    for (i = 0; i < GRID; i++) {
+        printf(" %d ", i + 1);
         for (j = 0; j < GRID; j++) {
-            printf("%4d", board[i][j]);
+            printf(" %c ", board[i][j]);
         }
         printf("\n");
     }
