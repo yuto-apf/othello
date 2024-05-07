@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#define EMPTY '-'
-#define WHITE 'O'
-#define BLACK 'X'
-#define GRID   8
+#define EMPTY      '-'
+#define PLACE_ABLE '*'
+#define WHITE      'O'
+#define BLACK      'X'
+#define GRID        8
 
 
 typedef struct {
@@ -25,13 +26,18 @@ typedef enum {
 typedef char stone;
 
 
+void play(void);
 void init_board(void);
 void print_board(void);
 coord *input_coord(coord *);
+int set_place_able(stone);
+void reset_place_able(void);
 void coord_copy(coord *, coord *);
 char to_upper(char);
 int is_in_board(coord *);
 int is_empty_square(coord *);
+int is_place_able_square(coord *);
+int calc_point(stone);
 int calc_distance(coord *, coord *);
 direction calc_direction(coord *, coord *);
 stone get_opposite_stone(stone);
@@ -40,30 +46,68 @@ int get_y_incremental_by_direction(direction);
 coord *get_pair_coord(coord *, coord *, direction, stone);
 void put_stone(coord *, stone);
 void flip_stone(coord *, coord *);
-void test(void);
 
 
 stone board[GRID][GRID];
+coord place_able_squares[GRID * GRID];
 
 
 int main(void) {
-    init_board();
-
-    test();
-    coord c;
-    while (input_coord(&c) != NULL) {
-        printf("%d, %d\n", c.x, c.y);
-    }
-
+    play();
     return 0;
 }
 
-void init_board(void) {
-    int i, j;
+void play(void) {
+    coord pos, pair;
+    direction dir;
+    stone color = BLACK;
+    int pnt_b, pnt_w, pass_flag = 0, stone_cnt = 4;
 
-    for (i = 0; i < GRID; i++) {
-        for (j = 0; j < GRID; j++) {
-            board[i][j] = EMPTY;
+    init_board();
+
+    while (stone_cnt < GRID * GRID) {
+        if (!set_place_able(color)) {
+            if (pass_flag) {
+                break;
+            }
+            pass_flag = 1;
+            printf("Pass.\n");
+        } else {
+            printf("\n");
+            print_board();
+            printf("\n");
+            do {
+                printf("Where do you place the stone '%c' ?\n", color);
+                printf(" >> ");
+            } while (input_coord(&pos) == NULL || !is_place_able_square(&pos));
+
+            for (dir = TOP_LEFT; dir <= LEFT; dir++) {
+                if (get_pair_coord(&pair, &pos, dir, color) != NULL) {
+                    put_stone(&pos, color);
+                    flip_stone(&pos, &pair);
+                }
+            }
+            pass_flag = 0;
+            stone_cnt++;
+        }
+        reset_place_able();
+        color = get_opposite_stone(color);
+    }
+    printf("\n");
+    print_board();
+
+    pnt_b = calc_point(BLACK);
+    pnt_w = calc_point(WHITE);
+    printf("BLACK(%c) : %d\n", BLACK, pnt_b);
+    printf("WHITE(%c) : %d\n", WHITE, pnt_w);
+}
+
+void init_board(void) {
+    int x, y;
+
+    for (y = 0; y < GRID; y++) {
+        for (x = 0; x < GRID; x++) {
+            board[y][x] = EMPTY;
         }
     }
     board[3][3] = WHITE;
@@ -73,17 +117,17 @@ void init_board(void) {
 }
 
 void print_board(void) {
-    int i, j;
+    int x, y;
 
     printf("   ");
-    for (i = 0; i < GRID; i++) {
-        printf(" %c ", 'A' + i);
+    for (x = 0; x < GRID; x++) {
+        printf(" %c ", 'A' + x);
     }
     printf("\n");
-    for (i = 0; i < GRID; i++) {
-        printf(" %d ", i + 1);
-        for (j = 0; j < GRID; j++) {
-            printf(" %c ", board[i][j]);
+    for (y = 0; y < GRID; y++) {
+        printf(" %d ", y + 1);
+        for (x = 0; x < GRID; x++) {
+            printf(" %c ", board[y][x]);
         }
         printf("\n");
     }
@@ -106,6 +150,47 @@ coord *input_coord(coord *dst) {
     }
 }
 
+int set_place_able(stone color) {
+    int replaced, x, y;
+    coord pos, tmp;
+    direction dir;
+
+    replaced = 0;
+    for (y = 0; y < GRID; y++) {
+        for (x = 0; x < GRID; x++) {
+            pos.x = x;
+            pos.y = y;
+            if (!is_empty_square(&pos)) {
+                continue;
+            }
+            for (dir = TOP_LEFT; dir <= LEFT; dir++) {
+                if (get_pair_coord(&tmp, &pos, dir, color) != NULL) {
+                    board[pos.y][pos.x] = PLACE_ABLE;
+                    replaced = 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    return replaced;
+}
+
+void reset_place_able(void) {
+    int x, y;
+    coord pos;
+
+    for (y = 0; y < GRID; y++) {
+        for (x = 0; x < GRID; x++) {
+            pos.x = x;
+            pos.y = y;
+            if (is_place_able_square(&pos)) {
+                board[pos.y][pos.x] = EMPTY;
+            }
+        }
+    }    
+}
+
 void coord_copy(coord *dst, coord *src) {
     dst->x = src->x;
     dst->y = src->y;
@@ -115,12 +200,30 @@ char to_upper(char c) {
     return ('a' <= c && c <= 'z') ? c - ('a' - 'A') : c;
 }
 
-int is_empty_square(coord *pos) {
-    return board[pos->y][pos->x] == EMPTY;
-}
-
 int is_in_board(coord *pos) {
     return (0 <= pos->x && pos->x < GRID) && (0 <= pos->y && pos->y < GRID);
+}
+
+int is_empty_square(coord *pos) {
+    return board[pos->y][pos->x] == EMPTY || board[pos->y][pos->x] == PLACE_ABLE;
+}
+
+int is_place_able_square(coord *pos) {
+    return board[pos->y][pos->x] == PLACE_ABLE;
+}
+
+int calc_point(stone color) {
+    int x, y, point = 0;
+
+    for (y = 0; y < GRID; y++) {
+        for (x = 0; x < GRID; x++) {
+            if (board[y][x] == color) {
+                point++;
+            }
+        }
+    }
+
+    return point;
 }
 
 int calc_distance(coord *from, coord *to) {
@@ -181,25 +284,20 @@ int get_y_incremental_by_direction(direction dir) {
 }
 
 coord *get_pair_coord(coord *dst, coord *pos, direction dir, stone color) {
-    int x_inc, y_inc, cnt;
+    int x_inc, y_inc, cnt = 0;
 
     coord_copy(dst, pos);
     x_inc = get_x_incremental_by_direction(dir);
     y_inc = get_y_incremental_by_direction(dir);
-    cnt = 0;
 
     while (1) {
         dst->x += x_inc;
         dst->y += y_inc;
         if (!is_in_board(dst) || is_empty_square(dst)) {
-            dst->x = -1;
-            dst->y = -1;
             return NULL;
         }
         if (board[dst->y][dst->x] == color) {
             if (cnt == 0) {
-                dst->x = -1;
-                dst->y = -1;
                 return NULL;
             } else {
                 return dst;
@@ -230,30 +328,5 @@ void flip_stone(coord *from, coord *to) {
         current.x += x_inc;
         current.y += y_inc;
         board[current.y][current.x] = color;
-    }
-}
-
-void test(void) {
-    direction dir;
-    coord pos, pair;
-    stone color = BLACK;
-
-    print_board();
-    while (1) {
-        printf("\n");
-        do {
-            printf("Where do you place the stone '%c' ?\n", color);
-            printf(" >> ");
-        } while (input_coord(&pos) == NULL);
-
-        for (dir = TOP_LEFT; dir <= LEFT; dir++) {
-            if (get_pair_coord(&pair, &pos, dir, color) != NULL) {
-                put_stone(&pos, color);
-                flip_stone(&pos, &pair);
-            }
-        }
-        printf("\n");
-        print_board();
-        color = get_opposite_stone(color);
     }
 }
