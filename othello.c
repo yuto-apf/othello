@@ -53,7 +53,14 @@ coord place_able_squares[GRID * GRID];
 
 
 int main(void) {
+    printf("*---------------------------------------*\n");
+    printf("*              OTHELLO GAME             *\n");
+    printf("*---------------------------------------*\n\n");
+    printf("- The black stone is displayed as 'X'.\n");
+    printf("- The white stone is displayed as 'O'.\n");
+    printf("- Please specify the coordinates, for example '1a' or '1A'.\n\n");
     play();
+
     return 0;
 }
 
@@ -61,24 +68,30 @@ void play(void) {
     coord pos, pair;
     direction dir;
     stone color = BLACK;
-    int pnt_b, pnt_w, pass_flag = 0, stone_cnt = 4;
+    int pnt_b, pnt_w, pass_flag = 0, move = 0, stone_cnt = 4;
 
     init_board();
+    printf("    ********* GAME START! *********\n");
 
     while (stone_cnt < GRID * GRID) {
+        printf("\n*** Move %d:\n", ++move);
+        printf(" - Your stone: %s ('%c')\n", (color == BLACK) ? "BLACK" : "WHITE", color);
         if (!set_place_able(color)) {
             if (pass_flag) {
                 break;
             }
             pass_flag = 1;
-            printf("Pass.\n");
+            printf("\nThere is no square to put your stone.\n");
+            printf("Passed.\n");
         } else {
-            printf("\n");
+            printf("\n - Current board:\n\n");
             print_board();
-            printf("\n");
+            printf("\n - Point:\n");
+            printf("    * BLACK: %d\n", calc_point(BLACK));
+            printf("    * WHITE: %d\n\n", calc_point(WHITE));
             do {
-                printf("Where do you place the stone '%c' ?\n", color);
-                printf(" >> ");
+                printf(" Q. Where do you place a stone?\n");
+                printf("  >> ");
             } while (input_coord(&pos) == NULL || !is_place_able_square(&pos));
 
             for (dir = TOP_LEFT; dir <= LEFT; dir++) {
@@ -95,11 +108,16 @@ void play(void) {
     }
     printf("\n");
     print_board();
+    printf("\n");
+    printf("    ********** GAME SET! **********\n\n");
 
     pnt_b = calc_point(BLACK);
     pnt_w = calc_point(WHITE);
-    printf("BLACK(%c) : %d\n", BLACK, pnt_b);
-    printf("WHITE(%c) : %d\n", WHITE, pnt_w);
+    printf("- Result:\n\n");
+    printf("    * BLACK(%c) : %d\n"  , BLACK, pnt_b);
+    printf("    * WHITE(%c) : %d\n\n", WHITE, pnt_w);
+    printf("- WINNER: %s\n", (color == BLACK) ? "BLACK" : "WHITE");
+
 }
 
 void init_board(void) {
@@ -119,13 +137,13 @@ void init_board(void) {
 void print_board(void) {
     int x, y;
 
-    printf("   ");
+    printf("         ");
     for (x = 0; x < GRID; x++) {
         printf(" %c ", 'A' + x);
     }
     printf("\n");
     for (y = 0; y < GRID; y++) {
-        printf(" %d ", y + 1);
+        printf("       %d ", y + 1);
         for (x = 0; x < GRID; x++) {
             printf(" %c ", board[y][x]);
         }
